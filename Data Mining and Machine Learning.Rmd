@@ -1,0 +1,250 @@
+---
+title: "Data Mining and Machine Learning"
+author: "Salman"
+date: "2024-08-14"
+output: word_document
+---
+
+```{r}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+
+# Load the dataset with corrected file path
+miami_housing <- read_csv("miami-housing.csv")
+
+# View the first few rows of the dataset
+head(miami_housing)
+
+# View the structure of the dataset
+str(miami_housing)
+
+# Get a summary of the dataset
+summary(miami_housing)
+
+# Check for missing values
+sapply(miami_housing, function(x) sum(is.na(x)))
+
+# Check for missing values
+missing_values <- sapply(miami_housing, function(x) sum(is.na(x)))
+print(missing_values)
+
+# Option 1: Remove rows with missing values
+miami_housing_cleaned <- miami_housing %>% na.omit()
+
+# Option 2: Impute missing values with the mean (example)
+miami_housing_cleaned <- miami_housing %>% mutate(across(everything(), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+
+
+```
+```{r}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+
+# Load the dataset with the correct file path
+miami_housing <- read_csv("miami-housing.csv")
+
+# Check for missing values
+missing_values <- sapply(miami_housing, function(x) sum(is.na(x)))
+print(missing_values)
+
+# No missing values, so we can proceed without removing or imputing
+
+# Normalize the data
+miami_housing_normalized <- miami_housing %>% mutate(across(everything(), scale))
+
+# View the first few rows of the normalized data
+print(head(miami_housing_normalized))
+
+```
+
+```{r}
+# Load the original dataset
+data <- read_csv("miami-housing.csv")
+# Load necessary library
+library(caret)
+
+# Split the data into training and testing sets
+set.seed(123)  # for reproducibility
+train_index <- createDataPartition(data$SALE_PRC, p = 0.7, list = FALSE)
+train_data <- data[train_index, ]
+test_data <- data[-train_index, ]
+
+# Further split the test data into testing and validation sets
+validation_index <- createDataPartition(test_data$SALE_PRC, p = 0.5, list = FALSE)
+validation_data <- test_data[validation_index, ]
+test_data <- test_data[-validation_index, ]
+
+# Save the datasets
+write_csv(train_data, "train_data.csv")
+write_csv(test_data, "test_data.csv")
+write_csv(validation_data, "validation_data.csv")
+
+# Histogram of Sale Prices (SALE_PRC)
+ggplot(train_data, aes(x = SALE_PRC)) +
+  geom_histogram(binwidth = 10000, fill = "blue", color = "black") +
+  labs(title = "Distribution of Sale Prices", x = "Sale Price", y = "Frequency")
+
+# Scatter Plot of Sale Price vs. Total Living Area (TOT_LVG_AREA)
+ggplot(train_data, aes(x = TOT_LVG_AREA, y = SALE_PRC)) +
+  geom_point() +
+  labs(title = "Sale Price vs. Total Living Area", x = "Total Living Area", y = "Sale Price")
+
+# Box Plot of Sale Price by Structure Quality (structure_quality)
+ggplot(train_data, aes(x = factor(structure_quality), y = SALE_PRC)) +
+  geom_boxplot(fill = "purple", color = "black") +
+  labs(title = "Sale Price by Structure Quality", x = "Structure Quality", y = "Sale Price")
+
+# Bar Plot of Month Sold (month_sold)
+ggplot(train_data, aes(x = factor(month_sold))) +
+  geom_bar(fill = "green", color = "black") +
+  labs(title = "Distribution of Sales by Month", x = "Month Sold", y = "Count") +
+  theme_minimal()
+
+# Load the necessary library for correlation plot
+library(corrplot)
+
+# Calculate the correlation matrix for numerical variables in the training data
+cor_matrix <- cor(train_data[, sapply(train_data, is.numeric)], use = "complete.obs")
+
+# Visualize the correlation matrix using corrplot
+corrplot(cor_matrix, method = "color", addCoef.col = "black", 
+         tl.col = "black", tl.srt = 45, title = "Correlation Matrix")
+```
+```{r}
+# Load libraries
+library(randomForest)
+library(caret)
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Train a Random Forest model
+rf_model <- randomForest(SALE_PRC ~ ., data = train_data, ntree = 500, mtry = 5, importance = TRUE)
+
+# Print the model summary
+print(rf_model)
+
+# Predict on the test data
+rf_predictions <- predict(rf_model, test_data)
+
+# Evaluate the model using RMSE
+rf_rmse <- RMSE(rf_predictions, test_data$SALE_PRC)
+print(rf_rmse)
+
+# Predict on the validation data
+validation_predictions <- predict(rf_model, validation_data)
+
+# Calculate RMSE on the validation data
+validation_rf_rmse <- RMSE(validation_predictions, validation_data$SALE_PRC)
+print(validation_rf_rmse)
+
+# Plot Actual vs Predicted for Validation Data
+ggplot(validation_data, aes(x = SALE_PRC, y = validation_predictions)) +
+  geom_point(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  labs(title = "Actual vs Predicted Sale Prices (Validation Data)", 
+       x = "Actual Sale Prices", y = "Predicted Sale Prices")
+
+# Plot Residuals vs Predicted Sale Prices for Validation Data
+residuals <- validation_data$SALE_PRC - validation_predictions
+ggplot(validation_data, aes(x = validation_predictions, y = residuals)) +
+  geom_point(color = "blue") +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Predicted Sale Prices (Validation Data)", 
+       x = "Predicted Sale Prices", y = "Residuals")
+
+```
+```{r}
+train_data <- read_csv("train_data.csv")
+
+# Load necessary libraries
+library(dplyr)
+
+# Generate summary statistics for key variables
+summary_stats <- train_data %>%
+  select(SALE_PRC, LND_SQFOOT, age, CNTR_DIST, structure_quality) %>%
+  summarise(
+    Sale_Price_Mean = mean(SALE_PRC, na.rm = TRUE),
+    Sale_Price_Median = median(SALE_PRC, na.rm = TRUE),
+    Sale_Price_SD = sd(SALE_PRC, na.rm = TRUE),
+    Sale_Price_Min = min(SALE_PRC, na.rm = TRUE),
+    Sale_Price_Max = max(SALE_PRC, na.rm = TRUE),
+    
+    Land_SqFt_Mean = mean(LND_SQFOOT, na.rm = TRUE),
+    Land_SqFt_Median = median(LND_SQFOOT, na.rm = TRUE),
+    Land_SqFt_SD = sd(LND_SQFOOT, na.rm = TRUE),
+    Land_SqFt_Min = min(LND_SQFOOT, na.rm = TRUE),
+    Land_SqFt_Max = max(LND_SQFOOT, na.rm = TRUE),
+    
+    Age_Mean = mean(age, na.rm = TRUE),
+    Age_Median = median(age, na.rm = TRUE),
+    Age_SD = sd(age, na.rm = TRUE),
+    Age_Min = min(age, na.rm = TRUE),
+    Age_Max = max(age, na.rm = TRUE),
+    
+    CNTR_DIST_Mean = mean(CNTR_DIST, na.rm = TRUE),
+    CNTR_DIST_Median = median(CNTR_DIST, na.rm = TRUE),
+    CNTR_DIST_SD = sd(CNTR_DIST, na.rm = TRUE),
+    CNTR_DIST_Min = min(CNTR_DIST, na.rm = TRUE),
+    CNTR_DIST_Max = max(CNTR_DIST, na.rm = TRUE),
+    
+    Structure_Quality_Mean = mean(structure_quality, na.rm = TRUE),
+    Structure_Quality_Median = median(structure_quality, na.rm = TRUE),
+    Structure_Quality_SD = sd(structure_quality, na.rm = TRUE),
+    Structure_Quality_Min = min(structure_quality, na.rm = TRUE),
+    Structure_Quality_Max = max(structure_quality, na.rm = TRUE)
+  )
+
+# Print the summary statistics
+print(summary_stats)
+```
+
+```{r}
+# Load necessary libraries
+library(caret)
+# Step 1: Prepare the Input Data
+new_data <- data.frame(
+  LATITUDE = 25.8910306063,
+  LONGITUDE = -80.1605605249,
+  PARCELNO = 728980145245,
+  SALE_PRC = 440000,
+  LND_SQFOOT = 11247,
+  TOT_LVG_AREA = 4552,
+  SPEC_FEAT_VAL = 2105,
+  RAIL_DIST = 4871.9,
+  OCEAN_DIST = 18507.2,
+  WATER_DIST = 375.8,
+  CNTR_DIST = 43897.9,
+  SUBCNTR_DI = 40115.7,
+  HWY_DIST = 41917.1,
+  age = 42,
+  avno60plus = 0,
+  month_sold = 8,
+  structure_quality = 5
+  
+)
+# Load the model (Ensure the file exists and the model is saved correctly)
+source("random_forest_model_train.R", local = TRUE)
+
+# Check if the column names and order match the model's training data
+print(colnames(new_data))
+##  [1] "LATITUDE"          "LONGITUDE"         "PARCELNO"         
+##  [4] "SALE_PRC"          "LND_SQFOOT"        "TOT_LVG_AREA"     
+##  [7] "SPEC_FEAT_VAL"     "RAIL_DIST"         "OCEAN_DIST"       
+## [10] "WATER_DIST"        "CNTR_DIST"         "SUBCNTR_DI"       
+## [13] "HWY_DIST"          "age"               "avno60plus"       
+## [16] "month_sold"        "structure_quality"
+# Normalize the new data if normalization was applied to training data
+preproc <- preProcess(train_data, method = c("center", "scale"))
+new_data_normalized <- predict(preproc, new_data)
+
+# Step 3: Make Prediction using Model
+predicted_price_lr <- predict(random_forest, new_data_normalized)
+
+# Print the predicted price
+print(predicted_price_lr)
+
+```
